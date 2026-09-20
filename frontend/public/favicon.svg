@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="cubeGrad" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00f0ff" />
+      <stop offset="50%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <linearGradient id="pageGrad1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e0f2fe" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+  </defs>
+  <g stroke="url(#cubeGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M50 75 L95 100 L140 75 L95 50 Z" opacity="0.8" />
+    <line x1="50" y1="75" x2="50" y2="120" />
+    <line x1="95" y1="100" x2="95" y2="145" />
+    <line x1="140" y1="75" x2="140" y2="120" />
+    <circle cx="50" cy="75" r="5" fill="#00f0ff" />
+    <circle cx="95" cy="50" r="5" fill="#38bdf8" />
+    <circle cx="140" cy="75" r="5" fill="#818cf8" />
+    <circle cx="95" cy="100" r="5" fill="#00f0ff" />
+  </g>
+  <path d="M125 50 C135 40 145 42 155 48 C150 62 140 68 130 65 Z" fill="url(#pageGrad1)" stroke="#00f0ff" stroke-width="1.5" />
+  <path d="M145 25 C158 18 168 22 172 32 C165 42 152 44 142 38 Z" fill="#ffffff" stroke="#38bdf8" stroke-width="1.5" />
+</svg>

@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pydantic
+langchain
+langchain-core
+langchain-google-genai
+google-genai
+python-docx
+pypdf
+python-multipart
+python-dotenv
+python-pptx
+pytesseract
+pdf2image
+beautifulsoup4

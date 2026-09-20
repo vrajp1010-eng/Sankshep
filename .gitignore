@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables & secrets (keep example templates)
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Build outputs & caches
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.coverage
+
+# SQLite Databases & logs
+*.db
+*.sqlite3
+*.log
+logs/
+
+# IDE / Editor config
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
