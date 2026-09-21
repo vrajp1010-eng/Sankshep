@@ -29,6 +29,7 @@ export default function App() {
   const [selectedFormats, setSelectedFormats] = useState(["summary", "linkedin_post", "blog_post"]);
   const [activeOutputFormat, setActiveOutputFormat] = useState("summary");
   const [selectedTone, setSelectedTone] = useState("Thought Leadership");
+  const [selectedDetail, setSelectedDetail] = useState("Balanced");
   const [targetLanguage, setTargetLanguage] = useState("Hindi");
 
   const [brandProfiles, setBrandProfiles] = useState(() => {
@@ -282,6 +283,8 @@ export default function App() {
     setIsGenerating(true);
     stopTTS();
     const activeProfile = brandProfiles[selectedProfileIndex];
+    const detailNote = selectedDetail && selectedDetail !== "Balanced" ? `Preferred output detail: ${selectedDetail}.` : "";
+    const combinedNotes = [activeProfile?.notes, detailNote].filter(Boolean).join(" ");
 
     if (generationMode === "single") {
       for (const fmt of selectedFormats) {
@@ -300,7 +303,7 @@ export default function App() {
               target_language: fmt === "translate" ? targetLanguage : undefined,
               tone: selectedTone,
               brand_voice_name: activeProfile?.name !== "Neutral Standard" ? activeProfile?.name : undefined,
-              brand_voice_notes: activeProfile?.notes || undefined,
+              brand_voice_notes: combinedNotes || undefined,
             }),
           });
 
@@ -340,7 +343,7 @@ export default function App() {
               target_language: fmt === "translate" ? targetLanguage : undefined,
               tone: selectedTone,
               brand_voice_name: activeProfile?.name !== "Neutral Standard" ? activeProfile?.name : undefined,
-              brand_voice_notes: activeProfile?.notes || undefined,
+              brand_voice_notes: combinedNotes || undefined,
             }),
           });
           const data = await response.json();
@@ -414,9 +417,15 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#F7F8FA] text-slate-800">
+      <a
+        href="#workspace"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:shadow-card"
+      >
+        Skip to workspace
+      </a>
       {toastMessage ? (
         <div
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-card"
+          className="fixed inset-x-4 bottom-6 z-50 mx-auto flex max-w-sm items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-card sm:inset-x-auto sm:right-6 sm:mx-0"
           role="status"
         >
           <CheckCircle2 className="h-4 w-4 text-emerald-600" strokeWidth={1.75} aria-hidden="true" />
@@ -461,14 +470,15 @@ export default function App() {
         ) : null}
 
         {activeTab === "workspace" && (
-          <div className="flex flex-col gap-6">
+          <div id="workspace" className="flex flex-col gap-6">
             <section className="max-w-3xl">
-              <p className="text-sm font-medium text-slate-500">
-                Sankshep.ai - A Gen-AI based Content Transformation Platform
-              </p>
-              <h1 className="mt-2 font-display text-[clamp(1.75rem,4vw,3.25rem)] font-semibold leading-[1.15] tracking-tight text-slate-900">
+              <p className="text-sm font-semibold tracking-tight text-slate-900">Sankshep.ai</p>
+              <h1 className="mt-1 font-display text-[clamp(1.75rem,4.2vw,3.25rem)] font-semibold leading-[1.12] tracking-tight text-slate-900">
                 Find exactly what you need, instantly.
               </h1>
+              <p className="mt-3 text-sm text-slate-500 sm:text-base">
+                Sankshep.ai - A Gen-AI based Content Transformation Platform
+              </p>
             </section>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(280px,22rem)_minmax(0,1fr)]">
@@ -503,6 +513,8 @@ export default function App() {
                   setCompareProvider={setCompareProvider}
                   selectedTone={selectedTone}
                   setSelectedTone={setSelectedTone}
+                  selectedDetail={selectedDetail}
+                  setSelectedDetail={setSelectedDetail}
                   targetLanguage={targetLanguage}
                   setTargetLanguage={setTargetLanguage}
                   brandProfiles={brandProfiles}

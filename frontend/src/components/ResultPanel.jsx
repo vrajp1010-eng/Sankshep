@@ -187,7 +187,7 @@ export default function ResultPanel({
                 className="h-full min-h-[360px] w-full resize-none bg-transparent p-5 text-sm leading-relaxed text-slate-800 focus:outline-none"
               />
             ) : (
-              <div className="document-body whitespace-pre-wrap p-5 text-sm leading-relaxed text-slate-800 sm:p-6">
+              <div className="document-body whitespace-pre-wrap break-words p-5 text-sm leading-relaxed text-slate-800 sm:p-6">
                 {currentOutputText}
                 {isGenerating && generatingFormat === activeOutputFormat ? <span className="streaming-cursor" /> : null}
               </div>
@@ -198,13 +198,13 @@ export default function ResultPanel({
             <EmptyState compare={false} />
           )
         ) : isGenerating ? (
-          <LoadingState label={selectedProviders.join(" · ")} />
+          <LoadingState
+            label={selectedProviders
+              .map((id) => providers.find((provider) => provider.id === id)?.label || id)
+              .join(" · ")}
+          />
         ) : currentCompareList.length > 0 ? (
-          <div
-            className={`grid flex-1 items-start gap-4 p-4 ${
-              currentCompareList.length === 2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
-            }`}
-          >
+          <div className="grid flex-1 items-start gap-4 p-3 sm:p-4 grid-cols-1 lg:grid-cols-2">
             {currentCompareList.map((item, index) => {
               const ok = item.status === "ok";
               const meta = providers.find((provider) => provider.id === item.provider);
@@ -229,7 +229,7 @@ export default function ResultPanel({
                   </header>
                   <div className="max-h-[420px] flex-1 overflow-y-auto">
                     {ok ? (
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">{item.output}</div>
+                      <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-800">{item.output}</div>
                     ) : (
                       <div className="flex flex-col items-center px-4 py-8 text-center">
                         <AlertCircle className="mb-2 h-6 w-6 text-rose-500" strokeWidth={1.75} />

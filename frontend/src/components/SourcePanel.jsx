@@ -57,7 +57,7 @@ export default function SourcePanel({
             role="tab"
             aria-selected={sourceMode === id}
             onClick={() => setSourceMode(id)}
-            className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-700 sm:text-sm ${
+            className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-700 sm:text-sm ${
               sourceMode === id ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -109,7 +109,7 @@ export default function SourcePanel({
               setDragActive(false);
             }}
             onDrop={handleDrop}
-            className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-8 text-center transition-colors sm:py-10 ${
+            className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-7 text-center transition-colors sm:py-10 ${
               dragActive ? "border-primary-700 bg-primary-100" : "border-slate-300 bg-slate-50 hover:border-primary-700 hover:bg-white"
             }`}
           >

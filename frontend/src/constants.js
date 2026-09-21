@@ -11,9 +11,16 @@ export const OUTPUT_FORMATS = [
   { id: "twitter_thread", label: "X Thread", icon: "x" },
   { id: "seo_meta", label: "SEO Meta", icon: "seo" },
   { id: "translate", label: "Translation", icon: "translate" },
+  { id: "key_points", label: "Key Points", icon: "keypoints" },
   { id: "simplify", label: "ELI5", icon: "simplify" },
   { id: "captions_srt", label: "Captions", icon: "captions" },
   { id: "alt_text", label: "Alt Text", icon: "alt" },
+];
+
+export const DETAIL_OPTIONS = [
+  { id: "Concise", label: "Concise" },
+  { id: "Balanced", label: "Balanced" },
+  { id: "Comprehensive", label: "Comprehensive" },
 ];
 
 export const TONE_OPTIONS = [

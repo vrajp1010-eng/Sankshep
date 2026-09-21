@@ -66,6 +66,8 @@
 .document-body {
   overflow-y: auto;
   min-height: 360px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 @keyframes streamBlink {
@@ -90,8 +92,7 @@
 }
 
 @media (max-width: 767px) {
-  .btn-primary,
-  .btn-secondary {
-    width: 100%;
+  .document-body {
+    min-height: 280px;
   }
 }

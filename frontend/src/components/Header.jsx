@@ -1,7 +1,7 @@
-import { BarChart3, History, Menu, Settings, Sparkles, X } from "lucide-react";
+import { BarChart3, History, LayoutDashboard, Menu, Settings, X } from "lucide-react";
 
 const NAV = [
-  { id: "workspace", label: "Workspace", Icon: Sparkles },
+  { id: "workspace", label: "Workspace", Icon: LayoutDashboard },
   { id: "history", label: "History", Icon: History },
   { id: "analytics", label: "Analytics", Icon: BarChart3 },
 ];
@@ -52,7 +52,7 @@ export default function Header({
 
         <div className="flex items-center gap-2">
           <div
-            className="hidden max-w-[220px] items-center gap-2 truncate rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600 lg:flex"
+            className="hidden max-w-[min(240px,32vw)] items-center gap-2 truncate rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600 md:flex"
             title={modelLabel || providerLabel}
           >
             <span
@@ -123,6 +123,16 @@ export default function Header({
             >
               Load demo
             </button>
+            <div className="mt-1 flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600 md:hidden">
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${engineStatus.online ? "bg-emerald-500" : "bg-rose-500"}`}
+                aria-hidden="true"
+              />
+              <span className="truncate">
+                {providerLabel || engineStatus.engine}
+                {modelLabel ? ` · ${modelLabel}` : ""}
+              </span>
+            </div>
           </nav>
         </div>
       )}

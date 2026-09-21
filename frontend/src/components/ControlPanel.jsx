@@ -1,6 +1,6 @@
 import { Check, Columns3, Cpu, GitCompare, LoaderCircle, Sparkles } from "lucide-react";
 import { FormatIcon } from "./FormatIcon";
-import { LANGUAGES, OUTPUT_FORMATS, TONE_OPTIONS } from "../constants";
+import { DETAIL_OPTIONS, LANGUAGES, OUTPUT_FORMATS, TONE_OPTIONS } from "../constants";
 
 export default function ControlPanel({
   selectedFormats,
@@ -15,6 +15,8 @@ export default function ControlPanel({
   setCompareProvider,
   selectedTone,
   setSelectedTone,
+  selectedDetail,
+  setSelectedDetail,
   targetLanguage,
   setTargetLanguage,
   brandProfiles,
@@ -69,6 +71,24 @@ export default function ControlPanel({
         <h2 className="mb-3 font-display text-sm font-semibold text-slate-900">Configure</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
+            <label htmlFor="brand-voice" className="mb-1 block text-xs font-medium text-slate-600">
+              Audience
+            </label>
+            <select
+              id="brand-voice"
+              value={selectedProfileIndex}
+              onChange={(event) => setSelectedProfileIndex(Number(event.target.value))}
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:border-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-700/20"
+            >
+              {brandProfiles.map((profile, index) => (
+                <option key={`${profile.name}-${index}`} value={index}>
+                  {profile.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label htmlFor="tone" className="mb-1 block text-xs font-medium text-slate-600">
               Tone
             </label>
@@ -86,43 +106,42 @@ export default function ControlPanel({
             </select>
           </div>
 
-          {selectedFormats.includes("translate") ? (
-            <div>
-              <label htmlFor="language" className="mb-1 block text-xs font-medium text-slate-600">
-                Language
-              </label>
-              <select
-                id="language"
-                value={targetLanguage}
-                onChange={(event) => setTargetLanguage(event.target.value)}
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:border-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-700/20"
-              >
-                {LANGUAGES.map((language) => (
-                  <option key={language} value={language}>
-                    {language}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <div>
-              <label htmlFor="brand-voice" className="mb-1 block text-xs font-medium text-slate-600">
-                Audience / brand voice
-              </label>
-              <select
-                id="brand-voice"
-                value={selectedProfileIndex}
-                onChange={(event) => setSelectedProfileIndex(Number(event.target.value))}
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:border-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-700/20"
-              >
-                {brandProfiles.map((profile, index) => (
-                  <option key={`${profile.name}-${index}`} value={index}>
-                    {profile.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div>
+            <label htmlFor="language" className="mb-1 block text-xs font-medium text-slate-600">
+              Language
+            </label>
+            <select
+              id="language"
+              value={targetLanguage}
+              onChange={(event) => setTargetLanguage(event.target.value)}
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:border-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-700/20"
+            >
+              {LANGUAGES.map((language) => (
+                <option key={language} value={language}>
+                  {language}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-slate-400">Applied when Translation is selected.</p>
+          </div>
+
+          <div>
+            <label htmlFor="detail" className="mb-1 block text-xs font-medium text-slate-600">
+              Detail
+            </label>
+            <select
+              id="detail"
+              value={selectedDetail}
+              onChange={(event) => setSelectedDetail(event.target.value)}
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:border-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-700/20"
+            >
+              {DETAIL_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -132,22 +151,24 @@ export default function ControlPanel({
           <button
             type="button"
             onClick={() => setGenerationMode("single")}
-            className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-700 ${
+            className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-medium sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-700 ${
               generationMode === "single" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"
             }`}
           >
-            <Cpu className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
-            Single provider
+            <Cpu className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+            <span className="hidden sm:inline">Single provider</span>
+            <span className="sm:hidden">Single</span>
           </button>
           <button
             type="button"
             onClick={() => setGenerationMode("compare")}
-            className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-700 ${
+            className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-medium sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-700 ${
               generationMode === "compare" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"
             }`}
           >
-            <GitCompare className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
-            Compare providers
+            <GitCompare className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+            <span className="hidden sm:inline">Compare providers</span>
+            <span className="sm:hidden">Compare</span>
           </button>
         </div>
 
@@ -156,20 +177,24 @@ export default function ControlPanel({
             <label htmlFor="provider" className="mb-1 block text-xs font-medium text-slate-600">
               Provider
             </label>
-            <select
-              id="provider"
-              value={selectedProvider}
-              onChange={(event) => setSelectedProvider(event.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:border-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-700/20"
-            >
-              {providers.map((provider) => (
-                <option key={provider.id} value={provider.id} disabled={!provider.available}>
-                  {provider.label}
-                  {provider.model ? ` · ${provider.model}` : ""}
-                  {provider.available ? "" : " (unavailable)"}
-                </option>
-              ))}
-            </select>
+            {providers.length === 0 ? (
+              <p className="text-sm text-slate-500">Looking up available providers...</p>
+            ) : (
+              <select
+                id="provider"
+                value={selectedProvider}
+                onChange={(event) => setSelectedProvider(event.target.value)}
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:border-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-700/20"
+              >
+                {providers.map((provider) => (
+                  <option key={provider.id} value={provider.id} disabled={!provider.available}>
+                    {provider.label}
+                    {provider.model ? ` · ${provider.model}` : ""}
+                    {provider.available ? "" : " (unavailable)"}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -194,9 +219,9 @@ export default function ControlPanel({
                 </select>
               </div>
             ))}
-            {available.length > 2 ? (
+            {available.length < 2 ? (
               <p className="sm:col-span-2 text-xs text-slate-500">
-                Comparison uses the two selected providers. Additional registered providers stay available in Settings via the backend.
+                Comparison needs two available providers. Use a single provider if only one is configured.
               </p>
             ) : null}
           </div>
@@ -207,7 +232,7 @@ export default function ControlPanel({
         type="button"
         onClick={onGenerate}
         disabled={isGenerating || !sourceText.trim() || compareDisabled}
-        className="btn-primary w-full"
+        className="btn-primary sticky bottom-3 z-10 w-full shadow-card lg:static lg:shadow-sm"
       >
         {isGenerating ? (
           <>
