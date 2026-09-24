@@ -1,77 +1,113 @@
-import sqlite3
-from contextlib import contextmanager
+"""
+Sankshep.ai — Data persistence layer.
 
-DB_PATH = "history.db"
+Provides user-scoped transformation logging, history retrieval,
+and analytics summaries backed by PostgreSQL.
+"""
 
-def init_db():
-    with get_conn() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                transformation_type TEXT,
-                input_words INTEGER,
-                output_words INTEGER,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+import logging
+from datetime import datetime, timezone
+from typing import Optional
+from uuid import UUID
 
-@contextmanager
-def get_conn():
-    conn = sqlite3.connect(DB_PATH)
+from sqlalchemy import func, select, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from models import TransformationHistory
+
+logger = logging.getLogger("sankshep.db")
+
+
+async def log_transformation(
+    db: AsyncSession,
+    user_id: UUID,
+    transformation_type: str,
+    input_words: int,
+    output_words: int,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+):
+    """Log a completed transformation to the user's history."""
     try:
-        yield conn
-        conn.commit()
-    finally:
-        conn.close()
-
-def log_transformation(transformation_type: str, input_words: int, output_words: int):
-    with get_conn() as conn:
-        conn.execute(
-            "INSERT INTO history (transformation_type, input_words, output_words) VALUES (?, ?, ?)",
-            (transformation_type, input_words, output_words),
+        record = TransformationHistory(
+            user_id=user_id,
+            transformation_type=transformation_type,
+            provider=provider or "",
+            model=model or "",
+            input_word_count=input_words,
+            output_word_count=output_words,
         )
+        db.add(record)
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Failed to log transformation: {e}")
+        await db.rollback()
 
-def get_recent_history(limit: int = 25):
-    with get_conn() as conn:
-        cur = conn.execute(
-            "SELECT id, transformation_type, input_words, output_words, created_at FROM history ORDER BY id DESC LIMIT ?",
-            (limit,),
+
+async def get_recent_history(db: AsyncSession, user_id: UUID, limit: int = 25):
+    """Retrieve recent transformation history for a specific user."""
+    try:
+        result = await db.execute(
+            select(TransformationHistory)
+            .where(TransformationHistory.user_id == user_id)
+            .order_by(desc(TransformationHistory.id))
+            .limit(limit)
         )
-        rows = cur.fetchall()
+        rows = result.scalars().all()
         return [
             {
-                "id": r[0],
-                "transformation_type": r[1],
-                "input_words": r[2],
-                "output_words": r[3],
-                "created_at": r[4],
+                "id": r.id,
+                "transformation_type": r.transformation_type,
+                "provider": r.provider,
+                "model": r.model,
+                "input_words": r.input_word_count,
+                "output_words": r.output_word_count,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
             }
             for r in rows
         ]
+    except Exception as e:
+        logger.error(f"Failed to retrieve history: {e}")
+        return []
 
-def get_analytics_summary():
-    with get_conn() as conn:
-        cur = conn.execute("""
-            SELECT 
-                COUNT(*) as total_runs,
-                COALESCE(SUM(input_words), 0) as total_in_words,
-                COALESCE(SUM(output_words), 0) as total_out_words
-            FROM history
-        """)
-        row = cur.fetchone()
-        
-        cur2 = conn.execute("""
-            SELECT transformation_type, COUNT(*) as count 
-            FROM history 
-            GROUP BY transformation_type 
-            ORDER BY count DESC 
-            LIMIT 5
-        """)
-        top_types = [{"type": r[0], "count": r[1]} for r in cur2.fetchall()]
-        
+
+async def get_analytics_summary(db: AsyncSession, user_id: UUID):
+    """Get aggregated analytics for a specific user's transformations."""
+    try:
+        # Totals
+        result = await db.execute(
+            select(
+                func.count(TransformationHistory.id).label("total_runs"),
+                func.coalesce(func.sum(TransformationHistory.input_word_count), 0).label("total_in"),
+                func.coalesce(func.sum(TransformationHistory.output_word_count), 0).label("total_out"),
+            ).where(TransformationHistory.user_id == user_id)
+        )
+        row = result.one()
+
+        # Top formats
+        top_result = await db.execute(
+            select(
+                TransformationHistory.transformation_type,
+                func.count(TransformationHistory.id).label("count"),
+            )
+            .where(TransformationHistory.user_id == user_id)
+            .group_by(TransformationHistory.transformation_type)
+            .order_by(desc("count"))
+            .limit(5)
+        )
+        top_formats = [{"type": r[0], "count": r[1]} for r in top_result.all()]
+
         return {
-            "total_runs": row[0] if row else 0,
-            "total_input_words": row[1] if row else 0,
-            "total_output_words": row[2] if row else 0,
-            "top_formats": top_types,
+            "total_runs": row.total_runs or 0,
+            "total_input_words": row.total_in or 0,
+            "total_output_words": row.total_out or 0,
+            "top_formats": top_formats,
+        }
+    except Exception as e:
+        logger.error(f"Failed to retrieve analytics: {e}")
+        return {
+            "total_runs": 0,
+            "total_input_words": 0,
+            "total_output_words": 0,
+            "top_formats": [],
         }

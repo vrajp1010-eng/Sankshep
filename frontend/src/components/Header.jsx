@@ -1,4 +1,5 @@
-import { BarChart3, History, LayoutDashboard, Menu, Settings, X } from "lucide-react";
+import { BarChart3, History, LayoutDashboard, Menu, Settings, X, LogOut, UserCircle } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 const NAV = [
   { id: "workspace", label: "Workspace", Icon: LayoutDashboard },
@@ -17,6 +18,8 @@ export default function Header({
   onOpenSettings,
   onLoadDemo,
 }) {
+  const { user, logout } = useAuth();
+
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
@@ -82,6 +85,24 @@ export default function Header({
             <Settings className="h-4 w-4" strokeWidth={1.75} />
           </button>
 
+          {user && (
+            <div className="hidden items-center gap-2 pl-2 border-l border-slate-200 md:flex">
+              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700" title={user.email}>
+                <UserCircle className="h-4 w-4 text-slate-400" strokeWidth={1.75} />
+                <span className="truncate max-w-[120px] font-medium">{user.name || user.email}</span>
+              </div>
+              <button
+                type="button"
+                onClick={logout}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                aria-label="Logout"
+                title="Logout"
+              >
+                <LogOut className="h-4 w-4" strokeWidth={1.75} />
+              </button>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={() => setMenuOpen((open) => !open)}
@@ -133,6 +154,26 @@ export default function Header({
                 {modelLabel ? ` · ${modelLabel}` : ""}
               </span>
             </div>
+
+            {user && (
+              <div className="mt-2 flex flex-col gap-1 border-t border-slate-200 pt-2 md:hidden">
+                <div className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700">
+                  <UserCircle className="h-4 w-4 text-slate-400" strokeWidth={1.75} />
+                  <span className="truncate">{user.name || user.email}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    setMenuOpen(false);
+                  }}
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-medium text-red-600 hover:bg-red-50"
+                >
+                  <LogOut className="h-4 w-4" strokeWidth={1.75} />
+                  Logout
+                </button>
+              </div>
+            )}
           </nav>
         </div>
       )}

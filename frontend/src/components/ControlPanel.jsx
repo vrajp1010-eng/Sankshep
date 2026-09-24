@@ -5,7 +5,7 @@ import { DETAIL_OPTIONS, LANGUAGES, OUTPUT_FORMATS, TONE_OPTIONS } from "../cons
 export default function ControlPanel({
   selectedFormats,
   toggleFormat,
-  selectAllFormats,
+  onToggleSelectAll,
   generationMode,
   setGenerationMode,
   providers,
@@ -29,6 +29,7 @@ export default function ControlPanel({
 }) {
   const available = providers.filter((provider) => provider.available);
   const compareDisabled = generationMode === "compare" && selectedProviders.length < 2;
+  const allSelected = selectedFormats.length === OUTPUT_FORMATS.length;
 
   return (
     <section className="flex flex-col gap-6">
@@ -37,10 +38,10 @@ export default function ControlPanel({
           <h2 className="font-display text-sm font-semibold text-slate-900">Select output</h2>
           <button
             type="button"
-            onClick={selectAllFormats}
+            onClick={onToggleSelectAll}
             className="text-xs font-medium text-primary-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-700"
           >
-            Select all
+            {allSelected ? "Deselect all" : "Select all"}
           </button>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

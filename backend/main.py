@@ -7,15 +7,20 @@ import docx
 import requests
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
-from fastapi import FastAPI, UploadFile, File, HTTPException, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from dotenv import load_dotenv
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from chains import get_chain, build_input_vars, resolve_transformation_type, TEMPLATES
-from db import init_db, log_transformation, get_recent_history, get_analytics_summary
+from db import log_transformation, get_recent_history, get_analytics_summary
+from database import init_db, get_db
+from auth import get_current_user
+from auth_routes import router as auth_router
+from models import User
 from providers import (
     PROVIDER_REGISTRY,
     list_public_providers,
@@ -35,17 +40,30 @@ logger = logging.getLogger("sankshep.api")
 app = FastAPI(
     title="Sankshep.ai - AI Content Transformation Platform",
     description="Multi-provider AI content transformation and comparison engine.",
-    version="2.0.0",
+    version="3.0.0",
 )
 
-init_db()
-check_provider_startup_status()
+# Register auth routes
+app.include_router(auth_router)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database and check provider status on startup."""
+    await init_db()
+    check_provider_startup_status()
+
 
 MAX_FILE_SIZE_MB = 15
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -116,9 +134,14 @@ async def status_api():
 # ── /transform ────────────────────────────────────────────────────────────────
 
 @app.post("/transform")
-async def transform_api(req: TransformRequest):
+async def transform_api(
+    req: TransformRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Single-provider token-by-token streaming transformation.
+    Protected: requires authentication.
     """
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="Source text cannot be empty.")
@@ -146,6 +169,8 @@ async def transform_api(req: TransformRequest):
         raise HTTPException(status_code=500, detail="Failed to initialize AI transformation chain.")
 
     input_word_count = len(req.text.split())
+    provider_model = get_provider_model(resolved_provider)
+    user_id = current_user.id
 
     def stream_and_log():
         collected = ""
@@ -160,7 +185,25 @@ async def transform_api(req: TransformRequest):
         finally:
             output_word_count = len(collected.split())
             if output_word_count > 0:
-                log_transformation(req.transformation_type, input_word_count, output_word_count)
+                # Schedule async logging in background
+                import threading
+                def _log():
+                    import asyncio
+                    async def _do_log():
+                        from database import async_session_factory
+                        if async_session_factory:
+                            async with async_session_factory() as session:
+                                await log_transformation(
+                                    session,
+                                    user_id,
+                                    req.transformation_type,
+                                    input_word_count,
+                                    output_word_count,
+                                    provider=resolved_provider,
+                                    model=provider_model,
+                                )
+                    asyncio.run(_do_log())
+                threading.Thread(target=_log, daemon=True).start()
 
     return StreamingResponse(stream_and_log(), media_type="text/plain; charset=utf-8")
 
@@ -175,6 +218,7 @@ async def _run_single_provider_generation(
     tone: Optional[str],
     brand_voice_name: Optional[str],
     brand_voice_notes: Optional[str],
+    user_id,
     timeout_seconds: float = 35.0,
 ) -> Dict[str, Any]:
     """
@@ -213,7 +257,19 @@ async def _run_single_provider_generation(
         # Log metrics to DB
         input_word_count = len(text.split())
         output_word_count = len(str(output).split())
-        log_transformation(f"{transformation_type}:{provider_id}", input_word_count, output_word_count)
+
+        from database import async_session_factory
+        if async_session_factory:
+            async with async_session_factory() as session:
+                await log_transformation(
+                    session,
+                    user_id,
+                    f"{transformation_type}:{provider_id}",
+                    input_word_count,
+                    output_word_count,
+                    provider=provider_id,
+                    model=model,
+                )
 
         return {
             "provider": provider_id,
@@ -244,10 +300,13 @@ async def _run_single_provider_generation(
 
 
 @app.post("/transform/compare")
-async def compare_api(req: CompareRequest):
+async def compare_api(
+    req: CompareRequest,
+    current_user: User = Depends(get_current_user),
+):
     """
     Executes multiple providers concurrently for side-by-side comparison.
-    Deduplicates IDs, validates min 2, runs independently with timeouts.
+    Protected: requires authentication.
     """
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="Source text cannot be empty.")
@@ -290,6 +349,7 @@ async def compare_api(req: CompareRequest):
             tone=req.tone,
             brand_voice_name=req.brand_voice_name,
             brand_voice_notes=req.brand_voice_notes,
+            user_id=current_user.id,
         )
         for pid in deduped_ids
     ]
@@ -468,7 +528,7 @@ def _parse_slides(slide_text: str) -> list:
         if not line:
             continue
 
-        slide_match = re.match(r"^(?:#+\s*|\*\*\s*)?Slide\s+\d+[:.]\s*(.*?)(?:\*\*)?$", line, re.IGNORECASE)
+        slide_match = re.match(r"^(?:#+\s*|\*\*\s*)?Slide\s+\d+[:\.]\s*(.*?)(?:\*\*)?$", line, re.IGNORECASE)
         if slide_match:
             if current_title is not None:
                 slides.append({"title": current_title, "bullets": current_bullets})
@@ -549,10 +609,19 @@ async def export_pptx(req: PptxExportRequest):
 # ── /history & /analytics ───────────────────────────────────────────────────
 
 @app.get("/history")
-async def history_api(limit: int = 25):
-    return {"history": get_recent_history(limit)}
+async def history_api(
+    limit: int = 25,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """User-scoped transformation history. Protected."""
+    return {"history": await get_recent_history(db, current_user.id, limit)}
 
 
 @app.get("/analytics")
-async def analytics_api():
-    return get_analytics_summary()
+async def analytics_api(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """User-scoped analytics summary. Protected."""
+    return await get_analytics_summary(db, current_user.id)

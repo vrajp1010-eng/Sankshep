@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, X, LoaderCircle } from "lucide-react";
 import { API_URL, OUTPUT_FORMATS, SAMPLE_TEXT } from "./constants";
 import Header from "./components/Header";
 import SourcePanel from "./components/SourcePanel";
@@ -8,8 +8,17 @@ import ResultPanel from "./components/ResultPanel";
 import HistoryView from "./components/HistoryView";
 import AnalyticsView from "./components/AnalyticsView";
 import SettingsDrawer from "./components/SettingsDrawer";
+import LoginPage from "./components/LoginPage";
+import SignupPage from "./components/SignupPage";
+import OTPVerification from "./components/OTPVerification";
+import { useAuth } from "./contexts/AuthContext";
 
 export default function App() {
+  const { user, loading: authLoading } = useAuth();
+  const [authPage, setAuthPage] = useState("login"); // login, signup, otp
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPurpose, setAuthPurpose] = useState("login"); // login, signup
+
   const [activeTab, setActiveTab] = useState("workspace");
   const [sourceMode, setSourceMode] = useState("file");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -415,6 +424,49 @@ export default function App() {
   const providerLabel = activeProvider?.label || engineStatus.engine;
   const modelLabel = activeProvider?.model || engineStatus.model;
 
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F7F8FA]">
+        <LoaderCircle className="h-8 w-8 animate-spin text-primary-700" strokeWidth={2} />
+      </div>
+    );
+  }
+
+  if (!user) {
+    if (authPage === "otp") {
+      return (
+        <OTPVerification
+          email={authEmail}
+          purpose={authPurpose}
+          onBack={() => setAuthPage(authPurpose)}
+          onSuccess={() => {}}
+        />
+      );
+    }
+    if (authPage === "signup") {
+      return (
+        <SignupPage
+          onSwitchToLogin={() => setAuthPage("login")}
+          onOtpRequired={(email, purpose) => {
+            setAuthEmail(email);
+            setAuthPurpose(purpose);
+            setAuthPage("otp");
+          }}
+        />
+      );
+    }
+    return (
+      <LoginPage
+        onSwitchToSignup={() => setAuthPage("signup")}
+        onOtpRequired={(email, purpose) => {
+          setAuthEmail(email);
+          setAuthPurpose(purpose);
+          setAuthPage("otp");
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-[#F7F8FA] text-slate-800">
       <a
@@ -481,7 +533,7 @@ export default function App() {
               </p>
             </section>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(280px,22rem)_minmax(0,1fr)]">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(320px,24rem)_minmax(0,1fr)]">
               <div className="flex min-w-0 flex-col gap-8 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 lg:p-6">
                 <SourcePanel
                   sourceMode={sourceMode}
@@ -503,7 +555,13 @@ export default function App() {
                 <ControlPanel
                   selectedFormats={selectedFormats}
                   toggleFormat={toggleFormat}
-                  selectAllFormats={() => setSelectedFormats(OUTPUT_FORMATS.map((format) => format.id))}
+                  onToggleSelectAll={() => {
+                    if (selectedFormats.length === OUTPUT_FORMATS.length) {
+                      setSelectedFormats([]);
+                    } else {
+                      setSelectedFormats(OUTPUT_FORMATS.map(f => f.id));
+                    }
+                  }}
                   generationMode={generationMode}
                   setGenerationMode={setGenerationMode}
                   providers={providers}

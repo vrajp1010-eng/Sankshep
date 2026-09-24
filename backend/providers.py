@@ -17,6 +17,7 @@ def redact_secrets(text: str) -> str:
     text = re.sub(r'sk-[a-zA-Z0-9_\-]{8,}', 'sk-[REDACTED]', text)
     text = re.sub(r'AIzaSy[a-zA-Z0-9_\-]{10,}', 'AIzaSy[REDACTED]', text)
     text = re.sub(r'AQ\.[a-zA-Z0-9_\-]{10,}', 'AQ.[REDACTED]', text)
+    text = re.sub(r'gsk_[a-zA-Z0-9_\-]{8,}', 'gsk_[REDACTED]', text)
     text = re.sub(r'Bearer\s+[a-zA-Z0-9_\-\.]{8,}', 'Bearer [REDACTED]', text, flags=re.IGNORECASE)
     text = re.sub(r'(api[_-]?key[\'\"]?\s*[:=]\s*[\'\"]?)[a-zA-Z0-9_\-]{8,}([\'\"]?)', r'\1[REDACTED]\2', text, flags=re.IGNORECASE)
     return text
@@ -66,7 +67,23 @@ def _create_gemini_llm(key: str, model: str, streaming: bool):
         return primary.with_fallbacks(fallbacks)
     return primary
 
-# Central Provider Registry — Gemini only
+
+def _create_groq_llm(key: str, model: str, streaming: bool):
+    """
+    Creates a Groq LLM instance using LangChain's ChatGroq wrapper.
+    Uses openai/gpt-oss-120b by default.
+    """
+    from langchain_groq import ChatGroq
+
+    return ChatGroq(
+        model=model or "openai/gpt-oss-120b",
+        groq_api_key=key,
+        temperature=0.7,
+        streaming=streaming,
+    )
+
+
+# Central Provider Registry — Gemini + Groq
 PROVIDER_REGISTRY: Dict[str, Dict[str, Any]] = {
     "gemini": {
         "id": "gemini",
@@ -78,6 +95,17 @@ PROVIDER_REGISTRY: Dict[str, Dict[str, Any]] = {
         "key_env": "GEMINI_API_KEY",
         "key_aliases": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
         "factory": _create_gemini_llm,
+    },
+    "groq": {
+        "id": "groq",
+        "label": "Groq",
+        "model_default": "openai/gpt-oss-120b",
+        "model_env": "GROQ_MODEL",
+        "model_pool": [],
+        "base_url": "https://api.groq.com",
+        "key_env": "GROQ_API_KEY",
+        "key_aliases": ["GROQ_API_KEY"],
+        "factory": _create_groq_llm,
     },
 }
 
@@ -105,15 +133,25 @@ def is_provider_available(provider_id: str) -> bool:
     return bool(get_provider_key(provider_id))
 
 def get_default_provider_id() -> str:
-    """Return the default AI provider (always Gemini).
+    """Return the default AI provider based on DEFAULT_PROVIDER env var.
 
-    Raises HTTPException(503) if GEMINI_API_KEY is not configured.
+    Falls back through available providers if the preferred one is not configured.
+    Raises HTTPException(503) if no provider is available.
     """
-    if is_provider_available("gemini"):
-        return "gemini"
+    preferred = os.getenv("DEFAULT_PROVIDER", "gemini").strip().lower()
+
+    # Try the preferred provider first
+    if preferred in PROVIDER_REGISTRY and is_provider_available(preferred):
+        return preferred
+
+    # Fall back to any available provider
+    for pid in PROVIDER_REGISTRY:
+        if is_provider_available(pid):
+            return pid
+
     raise HTTPException(
         status_code=503,
-        detail="Gemini provider is not configured. Please set GEMINI_API_KEY in your .env file.",
+        detail="No AI provider is configured. Please set GEMINI_API_KEY or GROQ_API_KEY in your .env file.",
     )
 
 def list_public_providers() -> List[Dict[str, Any]]:
@@ -153,9 +191,10 @@ def validate_provider_id(provider_id: Optional[str]) -> str:
 
     if not is_provider_available(resolved_id):
         label = PROVIDER_REGISTRY[resolved_id]["label"]
+        key_env = PROVIDER_REGISTRY[resolved_id]["key_env"]
         raise HTTPException(
             status_code=503,
-            detail=f"Provider '{label}' is not configured on the server. Please set GEMINI_API_KEY in your .env file.",
+            detail=f"Provider '{label}' is not configured on the server. Please set {key_env} in your .env file.",
         )
 
     return resolved_id

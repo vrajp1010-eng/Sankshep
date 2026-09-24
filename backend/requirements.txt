@@ -4,7 +4,9 @@ pydantic
 langchain
 langchain-core
 langchain-google-genai
+langchain-groq
 google-genai
+groq
 python-docx
 pypdf
 python-multipart
@@ -13,3 +15,10 @@ python-pptx
 pytesseract
 pdf2image
 beautifulsoup4
+requests
+sqlalchemy[asyncio]
+asyncpg
+passlib[bcrypt]
+python-jose[cryptography]
+google-auth
+google-api-python-client
